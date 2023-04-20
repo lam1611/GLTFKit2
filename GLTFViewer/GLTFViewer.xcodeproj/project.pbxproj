@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		1AA666B329B5B87F006EE43E /* VRMDefine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AA666B229B5B87F006EE43E /* VRMDefine.swift */; };
+		1AA666B529B5B8E9006EE43E /* StringExt.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AA666B429B5B8E9006EE43E /* StringExt.swift */; };
+		1AD8CB6628FB1AE3004E092A /* CCAvatarService+glb.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AD8CB6528FB1AE3004E092A /* CCAvatarService+glb.swift */; };
 		830C44B226F292C60075CCBF /* GLTFKit2.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 830C44B126F292C60075CCBF /* GLTFKit2.framework */; };
 		830C44B326F292C60075CCBF /* GLTFKit2.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 830C44B126F292C60075CCBF /* GLTFKit2.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		830C44B526F29B2C0075CCBF /* GLTFKit2.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 830C44B126F292C60075CCBF /* GLTFKit2.framework */; };
@@ -83,6 +86,9 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		1AA666B229B5B87F006EE43E /* VRMDefine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VRMDefine.swift; sourceTree = "<group>"; };
+		1AA666B429B5B8E9006EE43E /* StringExt.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = StringExt.swift; path = "../../../Personify Live/Personify Live/Class Extensions/StringExt.swift"; sourceTree = "<group>"; };
+		1AD8CB6528FB1AE3004E092A /* CCAvatarService+glb.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = "CCAvatarService+glb.swift"; path = "../../../ChromaCam/ChromaCam/ViewControllers/Avatar/Service/CCAvatarService+glb.swift"; sourceTree = "<group>"; };
 		830C44B126F292C60075CCBF /* GLTFKit2.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = GLTFKit2.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		833684CA26F139830057B9CA /* GLTFQuickLook.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = GLTFQuickLook.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		833684CB26F139830057B9CA /* Quartz.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Quartz.framework; path = System/Library/Frameworks/Quartz.framework; sourceTree = SDKROOT; };
@@ -200,7 +206,10 @@
 		83D9950325C6573C00B5B234 /* macOS */ = {
 			isa = PBXGroup;
 			children = (
+				1AA666B429B5B8E9006EE43E /* StringExt.swift */,
 				83D9950425C6573C00B5B234 /* AppDelegate.swift */,
+				1AA666B229B5B87F006EE43E /* VRMDefine.swift */,
+				1AD8CB6528FB1AE3004E092A /* CCAvatarService+glb.swift */,
 				83D9950625C6573C00B5B234 /* ViewController.swift */,
 				83D9950825C6573C00B5B234 /* GLTFDocument.swift */,
 				83D5B17C278295C30015E015 /* AnimationPlaybackViewController.swift */,
@@ -291,7 +300,7 @@
 		83D994F925C6573C00B5B234 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastSwiftUpdateCheck = 1410;
+				LastSwiftUpdateCheck = 1250;
 				LastUpgradeCheck = 1400;
 				TargetAttributes = {
 					833684C926F139830057B9CA = {
@@ -373,11 +382,14 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1AD8CB6628FB1AE3004E092A /* CCAvatarService+glb.swift in Sources */,
 				83D9950725C6573C00B5B234 /* ViewController.swift in Sources */,
+				1AA666B529B5B8E9006EE43E /* StringExt.swift in Sources */,
 				83D5B17D278295C30015E015 /* AnimationPlaybackViewController.swift in Sources */,
 				83D27444286B768E0003A3C5 /* SampleDracoPlugin.mm in Sources */,
 				83D9950525C6573C00B5B234 /* AppDelegate.swift in Sources */,
 				83D9950925C6573C00B5B234 /* GLTFDocument.swift in Sources */,
+				1AA666B329B5B87F006EE43E /* VRMDefine.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -624,6 +636,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = NJD4GXSB52;
 				ENABLE_HARDENED_RUNTIME = NO;
 				INFOPLIST_FILE = macOS/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -645,6 +658,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = NJD4GXSB52;
 				ENABLE_HARDENED_RUNTIME = NO;
 				INFOPLIST_FILE = macOS/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (

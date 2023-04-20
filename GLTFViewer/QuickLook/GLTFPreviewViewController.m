@@ -19,7 +19,7 @@
 }
 
 - (void)preparePreviewOfFileAtURL:(NSURL *)url completionHandler:(void (^)(NSError * _Nullable))handler {
-    [GLTFAsset loadAssetWithURL:url options:@{} handler:^(float progress, GLTFAssetStatus status,
+    [GLTFAsset loadAssetWithURL:url cacheAnimations:nil overrideCache:false options:@{} handler:^(float progress, GLTFAssetStatus status,
                                                           GLTFAsset *asset, NSError *error, BOOL *stop)
     {
         handler(error);

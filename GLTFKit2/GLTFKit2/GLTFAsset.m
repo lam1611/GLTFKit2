@@ -101,18 +101,46 @@ NSData *GLTFCreateImageDataFromDataURI(NSString *uriData) {
     return self;
 }
 
++ (BOOL)supportsSecureCoding {
+    return NO;
+}
+
+- (void)encodeWithCoder:(NSCoder *)coder {
+    [coder encodeObject:self.name forKey:@"name"];
+    [coder encodeObject:self.identifier.UUIDString forKey:@"identifier"];
+    [coder encodeObject:self.extensions forKey:@"extensions"];
+    [coder encodeObject:self.extras forKey:@"extras"];
+}
+
+- (nullable instancetype)initWithCoder:(nonnull NSCoder *)coder {
+    self = [super init];
+    if (self) {
+        self.extensions = [coder decodeObjectForKey:@"extensions"];
+        self.extras = [coder decodeObjectForKey:@"extras"];
+        self.name = [coder decodeObjectForKey:@"name"];
+        NSString *identifier = [coder decodeObjectForKey:@"identifier"];
+        _identifier = [[NSUUID alloc] initWithUUIDString:identifier];
+    }
+    return self;
+}
+
 @end
 
 @implementation GLTFAsset
 
 + (nullable instancetype)assetWithURL:(NSURL *)url
+                      cacheAnimations:(nullable NSURL *)cacheAnimations
+                        overrideCache:(BOOL)overrideCache
                               options:(NSDictionary<GLTFAssetLoadingOption, id> *)options
                                 error:(NSError **)error
 {
     __block NSError *internalError = nil;
     __block GLTFAsset *maybeAsset = nil;
     dispatch_semaphore_t loadSemaphore = dispatch_semaphore_create(0);
-    [self loadAssetWithURL:url options:options handler:^(float progress,
+    [self loadAssetWithURL:url
+           cacheAnimations:cacheAnimations
+             overrideCache:overrideCache
+                   options:options handler:^(float progress,
                                                          GLTFAssetStatus status,
                                                          GLTFAsset *asset,
                                                          NSError *error,
@@ -158,10 +186,16 @@ NSData *GLTFCreateImageDataFromDataURI(NSString *uriData) {
 }
 
 + (void)loadAssetWithURL:(NSURL *)url
+         cacheAnimations:(nullable NSURL *)cacheAnimations
+           overrideCache:(BOOL)overrideCache
                  options:(NSDictionary<GLTFAssetLoadingOption, id> *)options
                  handler:(nullable GLTFAssetLoadingHandler)handler
 {
-    [GLTFAssetReader loadAssetWithURL:url options:options handler:handler];
+    [GLTFAssetReader loadAssetWithURL:url
+                      cacheAnimations:cacheAnimations
+                        overrideCache:overrideCache
+                              options:options
+                              handler:handler];
 }
 
 + (void)loadAssetWithData:(NSData *)data
@@ -225,6 +259,38 @@ NSData *GLTFCreateImageDataFromDataURI(NSString *uriData) {
     return self;
 }
 
+- (void)encodeWithCoder:(NSCoder *)coder {
+    [super encodeWithCoder:coder];
+    [coder encodeObject:self.bufferView forKey:@"bufferView"];
+    
+    [coder encodeInteger:self.offset forKey:@"offset"];
+    [coder encodeInteger:self.componentType forKey:@"componentType"];
+    [coder encodeInteger:self.dimension forKey:@"dimension"];
+    [coder encodeInteger:self.count forKey:@"count"];
+    [coder encodeInteger:self.normalized forKey:@"normalized"];
+    
+    [coder encodeObject:self.minValues forKey:@"minValues"];
+    [coder encodeObject:self.maxValues forKey:@"maxValues"];
+}
+
+- (nullable instancetype)initWithCoder:(nonnull NSCoder *)coder {
+    self = [super initWithCoder:coder];
+    if (self) {
+        self.bufferView = [coder decodeObjectForKey:@"bufferView"];
+        
+        self.offset = [coder decodeIntegerForKey:@"offset"];
+        self.componentType = [coder decodeIntegerForKey:@"componentType"];
+        self.dimension = [coder decodeIntegerForKey:@"dimension"];
+        self.count = [coder decodeIntegerForKey:@"count"];
+        self.normalized = [coder decodeIntegerForKey:@"normalized"];
+        
+        self.minValues = [coder decodeObjectForKey:@"minValues"];
+        self.maxValues = [coder decodeObjectForKey:@"maxValues"];
+        
+    }
+    return self;
+}
+
 @end
 
 @implementation GLTFAnimation
@@ -235,6 +301,25 @@ NSData *GLTFCreateImageDataFromDataURI(NSString *uriData) {
     if (self = [super init]) {
         _channels = [channels copy];
         _samplers = [samplers copy];
+    }
+    return self;
+}
+
++ (BOOL)supportsSecureCoding {
+    return NO;
+}
+
+- (void)encodeWithCoder:(NSCoder *)coder {
+    [super encodeWithCoder:coder];
+    [coder encodeObject:self.channels forKey:@"channels"];
+    [coder encodeObject:self.samplers forKey:@"samplers"];
+}
+
+- (nullable instancetype)initWithCoder:(nonnull NSCoder *)coder {
+    self = [super initWithCoder:coder];
+    if (self) {
+        self.channels = [coder decodeObjectForKey:@"channels"];
+        self.samplers = [coder decodeObjectForKey:@"samplers"];
     }
     return self;
 }
@@ -250,6 +335,25 @@ NSData *GLTFCreateImageDataFromDataURI(NSString *uriData) {
     return self;
 }
 
++ (BOOL)supportsSecureCoding {
+    return NO;
+}
+
+- (void)encodeWithCoder:(NSCoder *)coder {
+    [super encodeWithCoder:coder];
+    [coder encodeObject:self.node.name forKey:@"nodeName"];
+    [coder encodeObject:self.path forKey:@"path"];
+}
+
+- (nullable instancetype)initWithCoder:(nonnull NSCoder *)coder {
+    self = [super initWithCoder:coder];
+    if (self) {
+        self.nodeName = [coder decodeObjectForKey:@"nodeName"];
+        self.path = [coder decodeObjectForKey:@"path"];
+    }
+    return self;
+}
+
 @end
 
 @implementation GLTFAnimationChannel
@@ -260,6 +364,27 @@ NSData *GLTFCreateImageDataFromDataURI(NSString *uriData) {
     if (self = [super init]) {
         _target = target;
         _sampler = sampler;
+        _samplerName = sampler.identifier.UUIDString;
+    }
+    return self;
+}
+
++ (BOOL)supportsSecureCoding {
+    return NO;
+}
+- (void)encodeWithCoder:(NSCoder *)coder {
+    [super encodeWithCoder:coder];
+    [coder encodeObject:self.target forKey:@"target"];
+    [coder encodeObject:self.samplerName forKey:@"samplerName"];
+    [coder encodeObject:self.sampler forKey:@"sampler"];
+}
+
+- (nullable instancetype)initWithCoder:(nonnull NSCoder *)coder {
+    self = [super initWithCoder:coder];
+    if (self) {
+        self.target = [coder decodeObjectForKey:@"target"];
+        self.sampler = [coder decodeObjectForKey:@"sampler"];
+        self.samplerName = [[coder decodeObjectForKey:@"samplerName"] copy];
     }
     return self;
 }
@@ -273,6 +398,27 @@ NSData *GLTFCreateImageDataFromDataURI(NSString *uriData) {
         _input = input;
         _output = output;
         _interpolationMode = GLTFInterpolationModeLinear;
+    }
+    return self;
+}
+
++ (BOOL)supportsSecureCoding {
+    return NO;
+}
+
+- (void)encodeWithCoder:(NSCoder *)coder {
+    [super encodeWithCoder:coder];
+    [coder encodeObject:_inputName forKey:@"inputName"];
+    [coder encodeObject:_outputName forKey:@"outputName"];
+    [coder encodeInteger:_interpolationMode forKey:@"interpolationMode"];
+}
+
+- (nullable instancetype)initWithCoder:(nonnull NSCoder *)coder {
+    self = [super initWithCoder:coder];
+    if (self) {
+        self.inputName = [coder decodeObjectForKey:@"inputName"];
+        self.outputName = [coder decodeObjectForKey:@"outputName"];
+        self.interpolationMode = [coder decodeIntegerForKey:@"interpolationMode"];
     }
     return self;
 }
@@ -296,6 +442,23 @@ NSData *GLTFCreateImageDataFromDataURI(NSString *uriData) {
     return self;
 }
 
+- (void)encodeWithCoder:(NSCoder *)coder {
+    [super encodeWithCoder:coder];
+    [coder encodeObject:self.data forKey:@"data"];
+    [coder encodeObject:self.uri.relativeString forKey:@"uri"];
+    [coder encodeInteger:self.length forKey:@"length"];
+}
+
+- (nullable instancetype)initWithCoder:(nonnull NSCoder *)coder {
+    self = [super initWithCoder:coder];
+    if (self) {
+        self.data = [coder decodeObjectForKey:@"data"];
+        self.uri = [NSURL URLWithString:[coder decodeObjectForKey:@"uri"]];
+        self.length = [coder decodeIntegerForKey:@"length"];
+    }
+    return self;
+}
+
 @end
 
 @implementation GLTFBufferView
@@ -310,6 +473,26 @@ NSData *GLTFCreateImageDataFromDataURI(NSString *uriData) {
         _length = length;
         _offset = offset;
         _stride = stride;
+    }
+    return self;
+}
+
+- (void)encodeWithCoder:(NSCoder *)coder {
+    [super encodeWithCoder:coder];
+    [coder encodeObject:self.buffer forKey:@"buffer"];
+    [coder encodeInteger:self.length forKey:@"length"];
+    [coder encodeInteger:self.offset forKey:@"offset"];
+    [coder encodeInteger:self.stride forKey:@"stride"];
+}
+
+- (nullable instancetype)initWithCoder:(nonnull NSCoder *)coder {
+    self = [super initWithCoder:coder];
+    if (self) {
+        self.buffer = [coder decodeObjectForKey:@"buffer"];
+        self.length = [coder decodeIntegerForKey:@"length"];
+        self.offset = [coder decodeIntegerForKey:@"offset"];
+        self.stride = [coder decodeIntegerForKey:@"stride"];
+        
     }
     return self;
 }
@@ -469,79 +652,14 @@ NSData *GLTFCreateImageDataFromDataURI(NSString *uriData) {
 
 @end
 
-@implementation GLTFSpecularParams
-
-- (instancetype)init {
-    if (self = [super init]) {
-        _specularFactor = 1.0f;
-        _specularColorFactor = (simd_float3){ 1.0f, 1.0f, 1.0f };
-    }
-    return self;
-}
-
-@end
-
-@implementation GLTFEmissiveParams
-
-- (instancetype)init {
-    if (self = [super init]) {
-        _emissiveFactor = (simd_float3){ 0.0f, 0.0f, 0.0f };
-        _emissiveStrength = 1.0f;
-    }
-    return self;
-}
-
-@end
-
-@implementation GLTFTransmissionParams
-@end
-
-@implementation GLTFVolumeParams
-
-- (instancetype)init {
-    if (self = [super init]) {
-        _thicknessFactor = 0.0f;
-        _attenuationDistance = FLT_MAX;
-        _attenuationColor = (simd_float3){ 1.0f, 1.0f, 1.0f };
-    }
-    return self;
-}
-
-@end
-
 @implementation GLTFClearcoatParams
-@end
-
-@implementation GLTFSheenParams
-
-- (instancetype)init {
-    if (self = [super init]) {
-        _sheenColorFactor = (simd_float3){ 0.0f, 0.0f, 0.0f };
-        _sheenRoughnessFactor = 0.0f;
-    }
-    return self;
-}
-
-@end
-
-@implementation GLTFIridescence
-
-- (instancetype)init {
-    if (self = [super init]) {
-        _iridescenceFactor = 0.0f;
-        _iridescenceIndexOfRefraction = 1.3f;
-        _iridescenceThicknessMinimum = 100.0f;
-        _iridescenceThicknessMaximum = 400.0f;
-    }
-    return self;
-}
-
 @end
 
 @implementation GLTFMaterial
 
 - (instancetype)init {
     if (self = [super init]) {
+        _emissiveFactor = (simd_float3){ 0.0f, 0.0f, 0.0f };
         _alphaMode = GLTFAlphaModeOpaque;
         _alphaCutoff = 0.5f;
         _doubleSided = NO;
@@ -582,6 +700,19 @@ NSData *GLTFCreateImageDataFromDataURI(NSString *uriData) {
         _primitiveType = primitiveType;
         _attributes = [attributes copy];
         _indices = indices;
+    }
+    return self;
+}
+
+- (void)encodeWithCoder:(NSCoder *)coder {
+    [super encodeWithCoder:coder];
+    [coder encodeObject:self.targets forKey:@"targets"];
+}
+
+- (nullable instancetype)initWithCoder:(nonnull NSCoder *)coder {
+    self = [super initWithCoder:coder];
+    if (self) {
+        self.targets = [coder decodeObjectForKey:@"targets"];
     }
     return self;
 }

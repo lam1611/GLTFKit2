@@ -7,6 +7,8 @@ NS_ASSUME_NONNULL_BEGIN
 @interface GLTFAssetReader : NSObject
 
 + (void)loadAssetWithURL:(NSURL *)url
+         cacheAnimations:(NSURL *)cacheAnimations
+           overrideCache:(BOOL)overrideCache
                  options:(NSDictionary<GLTFAssetLoadingOption, id> *)options
                  handler:(nullable GLTFAssetLoadingHandler)handler;
 

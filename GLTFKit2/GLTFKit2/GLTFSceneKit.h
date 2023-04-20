@@ -19,7 +19,9 @@ extern NSString *const GLTFAssetPropertyKeyExtensionsRequired;
 @interface GLTFSCNAnimation : NSObject
 @property (nonatomic, copy) NSString *name;
 @property (nonatomic, copy) NSArray<GLTFSCNAnimationChannel *> *channels;
-- (void)play;
+- (void)play:(NSInteger)repeatCount startDuration:(CGFloat)duration;
+- (void)setPause:(BOOL)isPause;
+- (void)stop:(CGFloat)duration;
 @end
 
 @interface SCNScene (GLTFSceneKit)
@@ -30,7 +32,7 @@ extern NSString *const GLTFAssetPropertyKeyExtensionsRequired;
 
 @property (nonatomic, nullable, readonly) SCNScene *defaultScene;
 @property (nonatomic, readonly) NSArray<SCNScene *> *scenes;
-@property (nonatomic, readonly) NSArray<SCNNode *> *nodes;
+@property (nonatomic, readonly) NSDictionary<NSString*, SCNNode *> *nodes;
 @property (nonatomic, readonly) NSArray<SCNLight *> *lights;
 @property (nonatomic, readonly) NSArray<SCNCamera *> *cameras;
 @property (nonatomic, readonly) NSArray<SCNGeometry *> *geometries;

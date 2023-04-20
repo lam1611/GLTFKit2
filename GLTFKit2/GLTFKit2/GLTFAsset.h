@@ -37,12 +37,13 @@ extern int GLTFBytesPerComponentForComponentType(GLTFComponentType type);
 extern int GLTFComponentCountForDimension(GLTFValueDimension dim);
 
 GLTFKIT2_EXPORT
-@interface GLTFObject : NSObject
+@interface GLTFObject : NSObject<NSCoding, NSSecureCoding>
 
 @property (nonatomic, nullable, copy) NSString *name;
 @property (nonatomic, readonly) NSUUID *identifier; // Globally unique; not persisted between runs
 @property (nonatomic, copy) NSDictionary<NSString *, id> *extensions;
 @property (nonatomic, nullable, copy) id extras;
+- (nullable instancetype)initWithCoder:(nonnull NSCoder *)coder;
 
 @end
 
@@ -82,6 +83,8 @@ GLTFKIT2_EXPORT
 @interface GLTFAsset : GLTFObject
 
 + (nullable instancetype)assetWithURL:(NSURL *)url
+                      cacheAnimations:(nullable NSURL *)cacheAnimations
+                        overrideCache:(BOOL)overrideCache
                               options:(NSDictionary<GLTFAssetLoadingOption, id> *)options
                                 error:(NSError **)error;
 
@@ -90,6 +93,8 @@ GLTFKIT2_EXPORT
                                  error:(NSError **)error;
 
 + (void)loadAssetWithURL:(NSURL *)url
+         cacheAnimations:(nullable NSURL *)cacheAnimations
+           overrideCache:(BOOL)overrideCache
                  options:(NSDictionary<GLTFAssetLoadingOption, id> *)options
                  handler:(nullable GLTFAssetLoadingHandler)handler;
 
@@ -121,6 +126,9 @@ GLTFKIT2_EXPORT
 @property (nonatomic, copy) NSArray<GLTFScene *> *scenes;
 @property (nonatomic, copy) NSArray<GLTFSkin *> *skins;
 @property (nonatomic, copy) NSArray<GLTFTexture *> *textures;
+@property (nonatomic, strong) NSURL *cacheAnimationsUrl;
+@property (nonatomic, strong) NSMutableDictionary *cacheAnimations;
+@property (nonatomic, assign) BOOL overrideCache;
 
 @end
 
@@ -161,44 +169,52 @@ GLTFKIT2_EXPORT
 
 - (instancetype)initWithChannels:(NSArray<GLTFAnimationChannel *> *)channels
                         samplers:(NSArray<GLTFAnimationSampler *> *)samplers NS_DESIGNATED_INITIALIZER;
+- (nullable instancetype)initWithCoder:(nonnull NSCoder *)coder NS_DESIGNATED_INITIALIZER;
 
 - (instancetype)init NS_UNAVAILABLE;
 
 @end
 
 GLTFKIT2_EXPORT
-@interface GLTFAnimationTarget : GLTFObject
+@interface GLTFAnimationTarget : GLTFObject<NSCoding, NSSecureCoding>
 
 @property (nonatomic, copy) NSString *path;
 @property (nonatomic, nullable, strong) GLTFNode *node;
+@property (nonatomic, copy) NSString *nodeName;
 
 - (instancetype)initWithPath:(NSString *)path NS_DESIGNATED_INITIALIZER;
+- (nullable instancetype)initWithCoder:(nonnull NSCoder *)coder NS_DESIGNATED_INITIALIZER;
 
 - (instancetype)init NS_UNAVAILABLE;
 
 @end
 
 GLTFKIT2_EXPORT
-@interface GLTFAnimationChannel : GLTFObject
+@interface GLTFAnimationChannel : GLTFObject<NSCoding, NSSecureCoding>
 
 @property (nonatomic, strong) GLTFAnimationSampler *sampler;
+@property (nonatomic, copy) NSString *samplerName;
 @property (nonatomic, strong) GLTFAnimationTarget *target;
 
 - (instancetype)initWithTarget:(GLTFAnimationTarget *)target
                        sampler:(GLTFAnimationSampler *)sampler NS_DESIGNATED_INITIALIZER;
+- (nullable instancetype)initWithCoder:(nonnull NSCoder *)coder NS_DESIGNATED_INITIALIZER;
 
 - (instancetype)init NS_UNAVAILABLE;
 
 @end
 
 GLTFKIT2_EXPORT
-@interface GLTFAnimationSampler : GLTFObject
+@interface GLTFAnimationSampler : GLTFObject<NSCoding, NSSecureCoding>
 
 @property (nonatomic, strong) GLTFAccessor *input;
 @property (nonatomic, strong) GLTFAccessor *output;
 @property (nonatomic, assign) GLTFInterpolationMode interpolationMode;
+@property (nonatomic, copy) NSString *inputName;
+@property (nonatomic, copy) NSString *outputName;
 
 - (instancetype)initWithInput:(GLTFAccessor *)input output:(GLTFAccessor *)output NS_DESIGNATED_INITIALIZER;
+- (nullable instancetype)initWithCoder:(nonnull NSCoder *)coder NS_DESIGNATED_INITIALIZER;
 
 - (instancetype)init NS_UNAVAILABLE;
 
@@ -322,43 +338,6 @@ GLTFKIT2_EXPORT
 
 @end
 
-GLTFKIT2_EXPORT
-@interface GLTFSpecularParams : GLTFObject
-
-@property (nonatomic, assign) float specularFactor;
-@property (nonatomic, nullable, strong) GLTFTextureParams *specularTexture;
-@property (nonatomic, assign) simd_float3 specularColorFactor;
-@property (nonatomic, nullable, strong) GLTFTextureParams *specularColorTexture;
-
-@end
-
-GLTFKIT2_EXPORT
-@interface GLTFEmissiveParams : GLTFObject
-
-@property (nonatomic, nullable, strong) GLTFTextureParams *emissiveTexture;
-@property (nonatomic, assign) simd_float3 emissiveFactor;
-// Introduced by the KHR_emissive_strength extension
-@property (nonatomic, assign) float emissiveStrength;
-
-@end
-
-GLTFKIT2_EXPORT
-@interface GLTFTransmissionParams : GLTFObject
-
-@property (nonatomic, nullable, strong) GLTFTextureParams *transmissionTexture;
-@property (nonatomic, assign) float transmissionFactor;
-
-@end
-
-GLTFKIT2_EXPORT
-@interface GLTFVolumeParams : GLTFObject
-
-@property (nonatomic, nullable) GLTFTextureParams *thicknessTexture;
-@property (nonatomic, assign) float thicknessFactor;
-@property (nonatomic, assign) float attenuationDistance;
-@property (nonatomic, assign) simd_float3 attenuationColor;
-
-@end
 
 GLTFKIT2_EXPORT
 @interface GLTFClearcoatParams : GLTFObject
@@ -372,42 +351,15 @@ GLTFKIT2_EXPORT
 @end
 
 GLTFKIT2_EXPORT
-@interface GLTFSheenParams : GLTFObject
-
-@property (nonatomic, assign) simd_float3 sheenColorFactor;
-@property (nonatomic, nullable) GLTFTextureParams *sheenColorTexture;
-@property (nonatomic, assign) float sheenRoughnessFactor;
-@property (nonatomic, nullable) GLTFTextureParams *sheenRoughnessTexture;
-
-@end
-
-GLTFKIT2_EXPORT
-@interface GLTFIridescence : NSObject
-
-@property (nonatomic, assign) float iridescenceFactor;
-@property (nonatomic, nullable) GLTFTextureParams *iridescenceTexture;
-@property (nonatomic, assign) float iridescenceIndexOfRefraction;
-@property (nonatomic, assign) float iridescenceThicknessMinimum;
-@property (nonatomic, assign) float iridescenceThicknessMaximum;
-@property (nonatomic, nullable) GLTFTextureParams *iridescenceThicknessTexture;
-
-@end
-
-GLTFKIT2_EXPORT
 @interface GLTFMaterial : GLTFObject
 
 @property (nonatomic, nullable) GLTFPBRMetallicRoughnessParams *metallicRoughness;
 @property (nonatomic, nullable) GLTFPBRSpecularGlossinessParams *specularGlossiness;
-@property (nonatomic, nullable) GLTFSpecularParams *specular;
-@property (nonatomic, nullable) GLTFEmissiveParams *emissive;
-@property (nonatomic, nullable) GLTFTransmissionParams *transmission;
-@property (nonatomic, nullable) GLTFVolumeParams *volume;
 @property (nonatomic, nullable) GLTFClearcoatParams *clearcoat;
-@property (nonatomic, nullable) GLTFSheenParams *sheen;
-@property (nonatomic, nullable) GLTFIridescence *iridescence;
 @property (nonatomic, nullable) GLTFTextureParams *normalTexture;
 @property (nonatomic, nullable) GLTFTextureParams *occlusionTexture;
-@property (nonatomic, nullable) NSNumber *indexOfRefraction;
+@property (nonatomic, nullable) GLTFTextureParams *emissiveTexture;
+@property (nonatomic, assign) simd_float3 emissiveFactor;
 @property (nonatomic, assign) GLTFAlphaMode alphaMode;
 @property (nonatomic, assign) float alphaCutoff;
 @property (nonatomic, assign, getter=isDoubleSided) BOOL doubleSided;

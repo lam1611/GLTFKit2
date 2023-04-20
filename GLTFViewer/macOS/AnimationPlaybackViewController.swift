@@ -81,7 +81,7 @@ class AnimationPlaybackViewController : NSViewController {
     func startAnimation(at index: Int) {
         let animation = animations[index]
         var maxDuration: TimeInterval = 0
-
+        animation.play()
         for channel in animation.channels {
             let channelAnimation = channel.animation
             channelAnimation.usesSceneTimeBase = true

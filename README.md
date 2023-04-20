@@ -143,17 +143,15 @@ Below is a checklist of glTF features and their current level of support.
 
 #### Extensions
  - [x] KHR_draco_mesh_compression (via plug-in)
- - [x] KHR_lights_punctual
+ - [ ] KHR_lights_punctual
  - [x] KHR_materials_clearcoat
- - [x] KHR_emissive_strength
- - [x] KHR_materials_ior
- - [x] KHR_materials_iridescence
- - [x] KHR_materials_sheen
- - [x] KHR_materials_specular
- - [x] KHR_materials_transmission
+ - [ ] KHR_materials_ior
+ - [ ] KHR_materials_sheen
+ - [ ] KHR_materials_specular
+ - [ ] KHR_materials_transmission
  - [x] KHR_materials_unlit
  - [ ] KHR_materials_variants
- - [x] KHR_materials_volume
+ - [ ] KHR_materials_volume
  - [ ] KHR_mesh_quantization
  - [ ] KHR_texture_basisu
  - [x] KHR_texture_transform
@@ -171,7 +169,7 @@ Pull requests are welcome, but will be audited strictly in order to maintain cod
 
 ## License
 
-    Copyright (c) 2021—2023 Warren Moore
+    Copyright (c) 2021—2022 Warren Moore
 
     Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
     documentation files (the "Software"), to deal in the Software without restriction, including without limitation the

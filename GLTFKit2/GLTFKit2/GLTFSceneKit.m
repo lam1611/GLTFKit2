@@ -13,6 +13,9 @@ NSString *const GLTFAssetPropertyKeyMinVersion = @"GLTFAssetPropertyKeyMinVersio
 NSString *const GLTFAssetPropertyKeyExtensionsUsed = @"GLTFAssetPropertyKeyExtensionsUsed";
 NSString *const GLTFAssetPropertyKeyExtensionsRequired = @"GLTFAssetPropertyKeyExtensionsRequired";
 
+NSString *const kCachePrimitives = @"cachePrimitives";
+NSString *const kCacheMeshTargets = @"cacheMeshTargets";
+
 static SCNFilterMode GLTFSCNFilterModeForMagFilter(GLTFMagFilter filter) {
     switch (filter) {
         case GLTFMagFilterNearest:
@@ -464,9 +467,30 @@ static float GLTFLuminanceFromRGBA(simd_float4 rgba) {
 
 @implementation GLTFSCNAnimation
 
-- (void)play {
+- (void)play:(NSInteger)repeatCount startDuration:(CGFloat)duration {
     for (GLTFSCNAnimationChannel *channel in self.channels) {
+        channel.animation.repeatCount = repeatCount;
+        
+        channel.animation.blendInDuration = (duration / 2);
+        channel.animation.blendOutDuration = duration;
+        
         [channel.target addAnimation:channel.animation forKey:nil];
+    }
+}
+
+- (void)setPause:(BOOL)isPause {
+    for (GLTFSCNAnimationChannel *channel in self.channels) {
+        [channel.target setPaused:isPause];
+    }
+}
+
+- (void)stop:(CGFloat)duration {
+    for (GLTFSCNAnimationChannel *channel in self.channels) {
+        if (@available(macOS 12.0, *)) {
+            [channel.target removeAllAnimationsWithBlendOutDuration:duration];
+        } else {
+            [channel.target removeAllAnimations];
+        }
     }
 }
 
@@ -486,7 +510,7 @@ static float GLTFLuminanceFromRGBA(simd_float4 rgba) {
 @property (nonatomic, copy) NSArray<SCNMaterial *> *materials;
 @property (nonatomic, copy) NSArray<SCNLight *> *lights;
 @property (nonatomic, copy) NSArray<SCNCamera *> *cameras;
-@property (nonatomic, copy) NSArray<SCNNode *> *nodes;
+@property (nonatomic, copy) NSDictionary<NSString*, SCNNode *> *nodes;
 @property (nonatomic, copy) NSArray<SCNGeometry *> *geometries;
 @property (nonatomic, copy) NSArray<SCNSkinner *> *skinners;
 @property (nonatomic, copy) NSArray<SCNMorpher *> *morphers;
@@ -625,16 +649,14 @@ static float GLTFLuminanceFromRGBA(simd_float4 rgba) {
             normalProperty.contents = imagesForIdentfiers[normalTexture.texture.source.identifier];
             GLTFConfigureSCNMaterialProperty(normalProperty, normalTexture);
         }
-        if (material.emissive.emissiveTexture) {
-            GLTFTextureParams *emissiveTexture = material.emissive.emissiveTexture;
+        if (material.emissiveTexture) {
+            GLTFTextureParams *emissiveTexture = material.emissiveTexture;
             SCNMaterialProperty *emissiveProperty = scnMaterial.emission;
             emissiveProperty.contents = imagesForIdentfiers[emissiveTexture.texture.source.identifier];
-            // TODO: How to support emissive.emissiveStrength?
             GLTFConfigureSCNMaterialProperty(emissiveProperty, emissiveTexture);
         } else {
             SCNMaterialProperty *emissiveProperty = scnMaterial.emission;
-            simd_float3 rgb = material.emissive.emissiveFactor;
-            // TODO: Multiply in emissive.emissiveStrength?
+            simd_float3 rgb = material.emissiveFactor;
             CGFloat rgbad[] = { rgb[0], rgb[1], rgb[2], 1.0 };
             emissiveProperty.contents = (__bridge_transfer id)CGColorCreate(colorSpaceLinearSRGB, &rgbad[0]);
         }
@@ -684,8 +706,8 @@ static float GLTFLuminanceFromRGBA(simd_float4 rgba) {
         materialsForIdentifiers[material.identifier] = scnMaterial;
     }
 
-    NSMutableDictionary <NSUUID *, SCNGeometry *> *geometryForIdentifiers = [NSMutableDictionary dictionary];
-    NSMutableDictionary <NSUUID *, SCNGeometryElement *> *geometryElementForIdentifiers = [NSMutableDictionary dictionary];
+    NSMutableDictionary <NSString *, SCNGeometry *> *geometryForIdentifiers = [NSMutableDictionary dictionary];
+    NSMutableDictionary <NSString *, SCNGeometryElement *> *geometryElementForIdentifiers = [NSMutableDictionary dictionary];
     for (GLTFMesh *mesh in self.asset.meshes) {
         for (GLTFPrimitive *primitive in mesh.primitives) {
             int vertexCount = 0;
@@ -721,7 +743,7 @@ static float GLTFLuminanceFromRGBA(simd_float4 rgba) {
                 }
             }
             SCNGeometryElement *element = GLTFSCNGeometryElementForIndexData(indexData, indexCount, indexSize, primitive);
-            geometryElementForIdentifiers[primitive.identifier] = element;
+            geometryElementForIdentifiers[primitive.name] = element;
 
             NSMutableArray *geometrySources = [NSMutableArray arrayWithCapacity:primitive.attributes.count];
             for (NSString *key in primitive.attributes.allKeys) {
@@ -736,7 +758,7 @@ static float GLTFLuminanceFromRGBA(simd_float4 rgba) {
             SCNGeometry *geometry = [SCNGeometry geometryWithSources:geometrySources elements:@[element]];
             geometry.name = mesh.name;
             geometry.firstMaterial = material ?: defaultMaterial;
-            geometryForIdentifiers[primitive.identifier] = geometry;
+            geometryForIdentifiers[primitive.name] = geometry;
         }
     }
 
@@ -798,7 +820,23 @@ static float GLTFLuminanceFromRGBA(simd_float4 rgba) {
             [scnNode addChildNode:scnChildNode];
         }
     }
-
+    
+    NSMutableDictionary<NSString *, NSArray<GLTFPrimitive *>*> *cachePrimitives;
+    NSMutableDictionary<NSString *, NSArray *> *cacheMeshTargets;
+    
+    // NOTE:- Need comment begin here if you need create cache animation
+    if (self.asset.cacheAnimations) {
+        cachePrimitives = self.asset.cacheAnimations[kCachePrimitives];
+        cacheMeshTargets = self.asset.cacheAnimations[kCacheMeshTargets];
+    }
+    
+    // NOTE:- Need comment end here if you need create cache animation
+    
+    if (!cachePrimitives) {
+        cachePrimitives = [NSMutableDictionary new];
+        cacheMeshTargets = [NSMutableDictionary new];
+    }
+    
     for (GLTFNode *node in self.asset.nodes) {
         SCNNode *scnNode = nodesForIdentifiers[node.identifier];
 
@@ -815,7 +853,27 @@ static float GLTFLuminanceFromRGBA(simd_float4 rgba) {
         NSMutableArray<SCNNode *> *geometryNodes = [NSMutableArray array];
 
         if (node.mesh) {
+            
+            NSMutableDictionary<NSString *, NSString *> *weightPaths = [NSMutableDictionary<NSString *, NSString *> dictionaryWithCapacity:node.mesh.targetNames.count];
+            
             NSArray<GLTFPrimitive *> *primitives = node.mesh.primitives;
+            NSArray<GLTFPrimitive *> *originPrimitives = primitives;
+            
+            NSString *nodeName = scnNode.name;
+            NSArray<GLTFPrimitive *> *cachedPrimitives = cachePrimitives[nodeName];
+            if (cachedPrimitives) {
+                primitives = cachedPrimitives;
+            } else {
+                cachePrimitives[nodeName] = primitives;
+            }
+            
+            NSArray *cachedMeshTargets = cacheMeshTargets[node.mesh.name];
+            if (cachedMeshTargets) {
+                node.mesh.targetNames = cachedMeshTargets;
+            } else {
+                cacheMeshTargets[node.mesh.name] = node.mesh.targetNames;
+            }
+            
             if (primitives.count == 1) {
                 [geometryNodes addObject:scnNode];
             } else {
@@ -829,7 +887,12 @@ static float GLTFLuminanceFromRGBA(simd_float4 rgba) {
             for (int i = 0; i < primitives.count; ++i) {
                 GLTFPrimitive *primitive = primitives[i];
                 SCNNode *geometryNode = geometryNodes[i];
-                geometryNode.geometry = geometryForIdentifiers[primitive.identifier];
+                
+                if (originPrimitives.count > i) {
+                    geometryNode.geometry = geometryForIdentifiers[originPrimitives[i].name];
+                } else {
+                    geometryNode.geometry = geometryForIdentifiers[primitive.name];
+                }
 
                 if (primitive.targets.count > 0) {
                     // If the base mesh doesn't contain normals, use Model I/O to generate them
@@ -839,7 +902,7 @@ static float GLTFLuminanceFromRGBA(simd_float4 rgba) {
                         geometryNode.geometry = [SCNGeometry geometryWithMDLMesh:mdlMesh];
                     }
 
-                    SCNGeometryElement *element = geometryElementForIdentifiers[primitive.identifier];
+                    SCNGeometryElement *element = geometryElementForIdentifiers[primitive.name];
                     NSMutableArray<SCNGeometry *> *morphGeometries = [NSMutableArray array];
                     int index = 0;
                     for (GLTFMorphTarget *target in primitive.targets) {
@@ -878,6 +941,8 @@ static float GLTFLuminanceFromRGBA(simd_float4 rgba) {
 
                         if (index < node.mesh.targetNames.count) {
                             geom.name = node.mesh.targetNames[index];
+                            weightPaths[geom.name] = [NSString stringWithFormat:@"morpher.weights[%d]",
+                                                      index];
                         }
                         index++;
                         [morphGeometries addObject:geom];
@@ -890,6 +955,8 @@ static float GLTFLuminanceFromRGBA(simd_float4 rgba) {
                     geometryNode.morpher = scnMorpher;
                 }
             }
+            
+            [scnNode setValue:weightPaths forUndefinedKey:@"weightPaths"];
         }
 
         if (node.skin) {
@@ -925,6 +992,16 @@ static float GLTFLuminanceFromRGBA(simd_float4 rgba) {
     for (GLTFAnimation *animation in self.asset.animations) {
         NSMutableArray *scnChannels = [NSMutableArray array];
         for (GLTFAnimationChannel *channel in animation.channels) {
+            if (!channel.sampler.input || !channel.sampler.output) {
+                continue;
+            }
+            
+            // Have issue with girl eyes model, this code below fix it.
+            if ([channel.target.nodeName isEqualToString:@"LeftEye"] ||
+                [channel.target.nodeName isEqualToString:@"RightEye"]) {
+                continue;
+            }
+            
             NSTimeInterval channelMaxKeyTime = 0.0;
             if (channel.sampler.input.maxValues.count > 0) {
                 channelMaxKeyTime = channel.sampler.input.maxValues.firstObject.doubleValue;
@@ -1040,7 +1117,13 @@ static float GLTFLuminanceFromRGBA(simd_float4 rgba) {
     _materials = [materialsForIdentifiers allValues];
     _lights = [lightsForIdentifiers allValues];
     _cameras = [camerasForIdentifiers allValues];
-    _nodes = [nodesForIdentifiers allValues];
+    
+    NSMutableDictionary<NSString *, SCNNode*> *nodes = [NSMutableDictionary<NSString *, SCNNode*> dictionaryWithCapacity:nodesForIdentifiers.count];
+    for (SCNNode *node in nodesForIdentifiers.allValues) {
+        nodes[node.name] = node;
+    }
+    
+    _nodes = nodes;
     _geometries = [geometryForIdentifiers allValues];
     _scenes = [scenesForIdentifiers allValues];
     _animations = [animationsForIdentifiers allValues];
@@ -1052,6 +1135,15 @@ static float GLTFLuminanceFromRGBA(simd_float4 rgba) {
     } else {
         // Last resort. The asset doesn't contain any scenes but we're contractually obligated to return something.
         _defaultScene = [SCNScene scene];
+    }
+    
+    if (self.asset.overrideCache) {
+        self.asset.cacheAnimations[kCachePrimitives] = cachePrimitives;
+        self.asset.cacheAnimations[kCacheMeshTargets] = cacheMeshTargets;
+        
+        NSData *cacheData = [NSKeyedArchiver archivedDataWithRootObject:self.asset.cacheAnimations];
+        BOOL writeResult = [cacheData writeToURL:self.asset.cacheAnimationsUrl atomically:true];
+        NSLog(@"Write cache animations: %d", writeResult);
     }
 }
 

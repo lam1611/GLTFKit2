@@ -21,7 +21,12 @@ class GLTFDocument: NSDocument {
     }
     
     override func read(from url: URL, ofType typeName: String) throws {
-        GLTFAsset.load(with: url, options: [:]) { (progress, status, maybeAsset, maybeError, _) in
+        let cacheURL = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first!.appendingPathComponent("cacheAnimation.plist")
+        
+        GLTFAsset.load(with: url,
+                       cacheAnimations: cacheURL,
+                       overrideCache: false,
+                       options: [:]) { (progress, status, maybeAsset, maybeError, _) in
             DispatchQueue.main.async {
                 if status == .complete {
                     self.asset = maybeAsset
